@@ -939,8 +939,17 @@ show_versions() {
     fi
     echo ""
 
+    echo -e "${WHITE}--- Neovim ---${NC}"
+    if command -v nvim >/dev/null 2>&1; then
+        nvim --version 2>&1 | head -n 1
+        log_success "Location: $(command -v nvim)"
+    else
+        log_error "Not installed"
+    fi
+    echo ""
+
     echo -e "${BLUE}════════════════════════════════════════════════════════════════${NC}"
-    
+
     # Re-enable exit on error
     set -e
 }
@@ -1331,7 +1340,7 @@ show_quick_status() {
     local not_installed=0
 
     # CLI Tools to check - using simple array
-    local cli_tools="java git mvn gradle node python3 rustc cargo ansible docker terraform trivy argocd aws az gcloud kubectl helm k9s minikube prometheus nginx lazydocker yazi bat croc btop fzf zoxide atuin gdu jq eza"
+    local cli_tools="java git mvn gradle node python3 rustc cargo ansible docker terraform trivy argocd aws az gcloud kubectl helm k9s minikube prometheus nginx lazydocker yazi bat croc btop fzf zoxide atuin gdu jq eza nvim"
 
     echo -e "${CYAN}CLI Tools:${NC}"
     echo -n "  Installed: "
@@ -2983,8 +2992,47 @@ install_eza() {
         echo 'alias ll="eza -lah --group-directories-first --git --icons"' >> ~/.bashrc
         echo 'alias la="eza -la"' >> ~/.bashrc
     }
-    
+
     log_success "Eza installed"
+}
+
+install_neovim() {
+    log_header "Installing Neovim"
+
+    # Map architecture to Neovim release naming
+    local nvim_arch="x86_64"
+    if [ "$ARCH_ALT" = "arm64" ]; then
+        nvim_arch="arm64"
+    fi
+
+    local version
+    version=$(get_github_release "neovim/neovim") || version="0.11.2"
+
+    log_step "Downloading Neovim v$version..."
+
+    local tmp_dir
+    tmp_dir=$(mktemp -d)
+    cd "$tmp_dir"
+
+    if ! safe_download "https://github.com/neovim/neovim/releases/download/v${version}/nvim-linux-${nvim_arch}.tar.gz" "nvim.tar.gz"; then
+        cd -
+        rm -rf "$tmp_dir"
+        return 1
+    fi
+
+    tar xzf nvim.tar.gz
+
+    # Install to /opt and symlink the binary into PATH
+    sudo rm -rf /opt/nvim
+    sudo mkdir -p /opt/nvim
+    sudo mv nvim-linux-*/* /opt/nvim/
+    sudo ln -sf /opt/nvim/bin/nvim /usr/local/bin/nvim
+
+    cd -
+    rm -rf "$tmp_dir"
+
+    log_success "Neovim installed"
+    nvim --version 2>&1 | head -n1 || true
 }
 
 # =========================================
@@ -3031,13 +3079,13 @@ show_menu() {
 ║  29) Btop                 30) Fzf                             ║
 ║  31) Zoxide               32) Atuin                           ║
 ║  33) Gdu                  34) JQ                              ║
-║  35) Eza                                                      ║
+║  35) Eza                  36) Neovim                          ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║  BUNDLES                                                      ║
 ║  50) Essential DevOps (1-6,8-12,14,17-18)                     ║
 ║  51) Full Kubernetes Stack (9,17-20)                          ║
 ║  52) Monitoring Stack (21-22)                                 ║
-║  53) All Terminal Utils (25-35)                               ║
+║  53) All Terminal Utils (25-36)                               ║
 ║  99) Install Everything                                       ║
 ╚═══════════════════════════════════════════════════════════════╝
 MENU
@@ -3088,6 +3136,7 @@ process_choice() {
         33)  install_gdu ;;
         34)  install_jq ;;
         35)  install_eza ;;
+        36)  install_neovim ;;
         *)   log_error "Invalid choice: $choice" ;;
     esac
 }
@@ -3104,8 +3153,8 @@ expand_bundles() {
             50) expanded="$expanded 1 2 3 4 5 6 8 9 10 11 12 14 17 18" ;;
             51) expanded="$expanded 9 17 18 19 20" ;;
             52) expanded="$expanded 21 22" ;;
-            53) expanded="$expanded 25 26 27 28 29 30 31 32 33 34 35" ;;
-            99) expanded="$expanded 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35" ;;
+            53) expanded="$expanded 25 26 27 28 29 30 31 32 33 34 35 36" ;;
+            99) expanded="$expanded 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36" ;;
             *)  expanded="$expanded $c" ;;
         esac
     done
