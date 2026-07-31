@@ -2710,7 +2710,7 @@ install_bat() {
 
 install_croc() {
     log_header "Installing Croc"
-    curl -fsSL https://getcroc.schollz.com | bash
+    curl -fsSL https://getcroc.com | bash
     log_success "Croc installed"
 }
 
